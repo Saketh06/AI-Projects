@@ -1,0 +1,25 @@
+# Study world
+predicates: Know(x, y) Tired(x)
+constants: ComputerScience Jordan
+2 actions
+
+Study subject person
+pre:
+preneg: Know(subject, person) Tired(person)
+del:
+add: Know(subject, person) Tired(person)
+
+Rest person
+pre: Tired(person)
+preneg:
+del: Tired(person)
+add:
+
+constants: Ethan Math Biology TheMuffinMan
+
+initial: Tired(Jordan) Tired(Ethan)
+
+goal: Know(ComputerScience,Jordan) Know(ComputerScience,Ethan) Know(TheMuffinMan, Ethan) Know(Math, Jordan) Tired(TheMuffinMan)
+goalneg:
+
+#EOF

@@ -1,0 +1,53 @@
+
+(Keyway is cut on the positive Y side)
+
+(parameters)
+#1   = 0.237            (key width - b)
+#2   = 0.15            (keyway depth - t2)
+#3   = 0.791            (shaft diameter - d)
+#4   = 0.082            (cutter width)
+#5   = 0.327 (cutter length +y from spindle center)
+#6   = 0.100            (top of stroke)
+#7   = -2.04           (bottom of stroke)
+#8   = 0.001            (depth of cut - per stroke)
+#9   = 0.001            (x spring compensation)
+#10  = 0.002            (y spring compensation)
+#11  = 75               (plunge feedrate)
+
+(calculated)
+#100 = [#3 / 2]                             (shaft radius)
+#101 = [#1/2]                               (half of key width)
+#102 = [[#1-#4]/2]                          (x offset - half of key width minus cutter width)
+#103 = [SQRT[[#100*#100]-[#101*#101]] - #5] (starting Y position)
+#104 = [#100 - #2 - #10 + #5]               (ending y position)
+#105 = [#104 - #103]                        (total y feed)
+#106 = [#105 / #8] 
+#107 = 0.038 (first x offset)
+#108 = -0.001 (second x)
+#109 = -0.04` (3rd x)
+
+
+(main program)
+G54
+M19 P315
+#2022 = -#103             (y position)
+G0 X-0.02 Y#2022             (move to zero X and starting Y)
+G0 G43 Z#6 H05                (move Z to top of stroke)
+M97 P100 L#106         (run the plunge multiple times)
+M30                     (end and rewind)
+
+
+(subprogram for individual plunge)
+N100
+G0 Y#2022                (move to Y position)
+G0 X[#107 + #9]         (move X to one side)
+G1 Z#7 F#11             (plunge)
+G0 Z#6                  (retract)
+G0 X[0 + #108]     (move X to other side)
+G1 Z#7 F#11             (plunge)
+G0 Z#6                  (retract)
+G0 X[0 + #109 - #9]     (move X to other side)
+G1 Z#7 F#11             (plunge)
+G0 Z#6   		(retract)
+#2022 = [#2022 - #8]      (increment Y position)
+M99

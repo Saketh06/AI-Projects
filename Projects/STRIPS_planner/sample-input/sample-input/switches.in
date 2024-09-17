@@ -1,0 +1,28 @@
+# Elevator World
+predicates: AtFloor(x) ElevatorOpen(x) ElevatorClosed(x) ButtonPressed(x)
+constants: F1 F2 F3
+3 actions
+
+MoveElevator currentFloor destinationFloor
+pre: AtFloor(currentFloor) ElevatorClosed(currentFloor)
+preneg:
+del: AtFloor(currentFloor) ElevatorClosed(currentFloor)
+add: AtFloor(destinationFloor) ElevatorClosed(destinationFloor)
+
+OpenElevator currentFloor
+pre: AtFloor(currentFloor) ElevatorClosed(currentFloor)
+preneg: ElevatorOpen(currentFloor)
+del: AtFloor(currentFloor) ElevatorClosed(currentFloor)
+add: AtFloor(currentFloor) ElevatorOpen(currentFloor)
+
+CloseElevator currentFloor
+pre: AtFloor(currentFloor) ElevatorOpen(currentFloor)
+preneg: ElevatorClosed(currentFloor)
+del: AtFloor(currentFloor) ElevatorOpen(currentFloor)
+add: AtFloor(currentFloor) ElevatorClosed(currentFloor)
+
+constants: F1 F2 F3
+initial: AtFloor(F1) ElevatorClosed(F1)
+goal: AtFloor(F3) ElevatorClosed(F3)
+goalneg:
+EOF

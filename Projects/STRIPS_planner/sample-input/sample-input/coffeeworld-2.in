@@ -1,0 +1,17 @@
+# Room Navigation Domain
+predicates: InRoom(x) Connected(x, y) At(x, y)
+constants: RoomA RoomB RoomC DoorAB DoorBC
+
+2 actions
+
+MoveTo room src dst
+pre: InRoom(src) Connected(src, dst)
+preneg:
+del: At(agent, src)
+add: At(agent, dst)
+
+OpenDoor door
+pre: At(agent, door)
+preneg:
+del: At(agent, door)
+add: At(agent, connectedRoom)
