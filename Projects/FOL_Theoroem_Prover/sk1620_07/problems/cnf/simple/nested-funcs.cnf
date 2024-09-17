@@ -1,0 +1,4 @@
+-Man(x) | Mortal(x)
+Man(F1(F2(Socrates)))
+--- negated query ---
+-Mortal(F1(F2(Socrates)))

@@ -1,0 +1,518 @@
+#!/usr/bin/env python3
+from __future__ import print_function
+
+import string
+from math import log, log2
+import random
+import math
+import numpy as np
+import matplotlib
+
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+import cairo
+from statistics import mean, stdev
+import sys
+from subprocess import Popen, PIPE
+import time
+import threading
+from builtins import str, int, ValueError, len, bytes, isinstance, float, range, min, type, sorted
+from time import gmtime, strftime
+
+__author__ = 'Bence Cserna'
+TIME_LIMIT = 60
+
+# Maximum window size
+MAX_X = 1080
+MAX_Y = 1080
+
+# Basic colors
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+BLACK = (0, 0, 0)
+
+# Univerisy of New Hampshire brand colors
+BRAND_DARK = [37, 55, 70]
+BRAND_LIGHT1 = (162, 170, 173)
+BRAND_LIGHT2 = (214, 210, 196)
+BRAND_ORANGE = [247, 122, 5]
+
+
+def error(*objs):
+    print("ERROR: ", *objs, file=sys.stderr)
+
+
+def debug(*objs):
+    # print(": ", *objs, file=sys.stdout)
+    pass
+
+
+def filter_input(lines):
+    return [line for line in lines if not line.startswith('#') and len(line) > 0]
+
+
+class Mdp:
+    def __init__(self, start):
+        self.states = []
+        self.start = start
+        self.vi_base = None
+        self.rtdp_base = None
+        self.size = None
+        self.speed = None
+        self.inline_args = False
+
+
+class State:
+    def __init__(self, reward, terminal, action_count):
+        self.action_count = action_count
+        self.terminal = terminal
+        self.reward = reward
+        self.actions = []
+        self.policy = None
+
+
+class Action:
+    def __init__(self, target, probability):
+        if isinstance(target, int):
+            self.target = target
+        else:
+            self.target = int(target)
+
+        if isinstance(probability, float):
+            self.probability = probability
+        else:
+            self.probability = float(probability)
+
+
+def read_problem(input):
+    first_line = input[0]
+
+    if first_line.startswith("##"):
+        vi_base, rtdp_base, size, speed = first_line[2:].strip().split(" ")
+        width, height, track, speed = input[1][2:].strip().split(" ")
+        inline_args = True
+    else:
+        inline_args = False
+
+    lines = filter_input(input)
+
+    try:
+        state_count_header = lines.pop(0).strip()
+        state_count = int(state_count_header.split(" ")[-1])
+        print(state_count_header)
+
+    except ValueError:
+        error("Invalid header! The following line should contain the number of states: " + state_count_header)
+        sys.exit(0)
+
+    try:
+        start_state_header = lines.pop(0).strip()
+        start = int(start_state_header.split(" ")[-1])
+        print(start_state_header)
+    except ValueError:
+        error("Invalid header! The following line should contain the start state index: " + start_state_header)
+        sys.exit(0)
+
+    mdp = Mdp(start)
+    state = None
+    action_counter = 0
+
+    for line in lines:
+        tokens = [token.strip() for token in line.strip().split(" ") if len(token.strip()) > 0]
+
+        if state is None:
+            state = State(float(tokens[0]), int(tokens[1]), int(tokens[2]))
+            action_counter = int(tokens[2])
+
+            if action_counter == 0:
+                mdp.states.append(state)
+                state = None
+
+        else:
+            tokens.pop(0)  # Remove action count
+            successors = []
+
+            while len(tokens) > 0:
+                successors.append(Action(tokens.pop(0), tokens.pop(0)))
+
+            state.actions.append(successors)
+
+            action_counter -= 1
+            if action_counter == 0:
+                mdp.states.append(state)
+                state = None
+
+    if inline_args:
+        mdp.speed = speed
+        mdp.size = size
+        mdp.rtdp_base = rtdp_base
+        mdp.vi_base = vi_base
+        mdp.track = track
+        mdp.inline_args = True
+    else:
+        mdp.inline_args = False
+
+    return mdp
+
+
+def read_policy(result, mdp):
+    if abs(len(result) - len(mdp.states)) > 2:
+        error("Invalid policy or input. Number of states should be equal to the size of the policy.")
+        print(len(result))
+        print(len(mdp.states))
+        # error(str(input))
+
+        sys.exit(-1)
+
+    for state in mdp.states:
+        pop = result.pop(0).strip()
+        if len(pop) == 0:
+            state.policy = None
+        else:
+            state.policy = int(pop)
+
+    print(result.pop(0))  # Print last line
+
+
+def execute_policy(mdp):
+    state = mdp.states[mdp.start]
+    reward = 0.0
+    # print(mdp.start)
+    trace = [mdp.start]
+    counter = int(1000)
+
+    while state.terminal != 1 and counter > 0:
+        counter -= 1
+
+        if state.policy is None:
+            # print("No policy: " + str(reward))
+            return reward, trace
+
+        successors = state.actions[state.policy]
+        # print("policy: " + str(state.policy))
+
+        # print(state.policy)
+        residue = random.uniform(0.0, 1.0)
+        for action in successors:
+            if residue < action.probability:
+                state = mdp.states[action.target]
+                # print("target: " + str(action.target))
+                reward += state.reward  # Collect reward
+                trace.append(action.target)
+                break
+            else:
+                residue -= action.probability
+
+    return reward, trace
+
+
+def evaluate_policy(mdp):
+    rewards = []
+    traces = []
+
+    for _ in range(0, 25):
+        policy, trace = execute_policy(mdp)
+        rewards.append(policy)
+        traces.append(trace)
+
+    return rewards, traces
+
+
+def print_usage():
+    print("Usage: executable algorithm discount_factor [base [size speed track_size]]")
+
+
+def execute_application(executable, params, process, raw_input_line, mdp):
+    cmd = [" ".join(["./" + executable] + params)]
+
+    print("Command: " + str(cmd))
+    process[0] = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
+    start = time.time()
+    debug("Waiting for termination")
+    out, err = process[0].communicate(str.encode(raw_input_line))
+
+    end = time.time()
+    debug("Execution time: %s seconds" % (end - start))
+
+    raw_policy = bytes.decode(out).split("\n")
+
+    read_policy(raw_policy, mdp)
+    return evaluate_policy(mdp)
+
+
+def process_results(results, labels, algorithm):
+    font_size = 20
+
+    print("Rewards: ")
+    for rewards in results:
+        # print("Max: {0} {1}".format(str(max(rewards)), str(sorted(rewards))))
+        print("Max: {0} Mean: {1} Stdev: {2}".format(str(max(rewards)), str(mean(rewards)), str(stdev(rewards))))
+
+        fig, axes = plt.subplots(nrows=1, ncols=1)
+
+        axes.violinplot(results, showmeans=True)
+        axes.set_title('Algorithm: ' + algorithm, fontsize=font_size)
+        axes.set_xlabel('termination criterion')
+        axes.set_ylabel('reward')
+
+        plt.setp(axes, xticks=[y + 1 for y in range(len(results))], xticklabels=labels)
+        plt.xticks(rotation=70)
+
+        fig.subplots_adjust(hspace=0.4)
+        fig.suptitle('UNH CS730/830 Artificial Intelligence - Markov Decision Processes')
+
+    pdf_name = 'mdp-results-{}.pdf'.format(strftime("%Y-%m-%d::%H:%M:%S", gmtime()))
+    pp = PdfPages(pdf_name)
+    pp.savefig(fig)
+    pp.close()
+
+
+def print_result(rewards):
+    debug("ordered rewards:" + str(sorted(rewards)))
+    debug("mean: " + str(mean(rewards)))
+    debug("stdev: " + str(stdev(rewards)))
+    debug("max: " + str(max(rewards)))
+    debug("min: " + str(min(rewards)))
+
+    debug()
+
+
+def map_id(id, size, speed):
+    if speed == 0:
+        w = int(id / size)
+        h = int(id % size)
+    else:
+        speed = speed * 2 + 1
+        w = int(id / (size * speed * speed))
+        h = int((id % (size * speed * speed)) / (speed * speed))
+
+    return [w, h]
+
+
+def translate_trace(trace, size, speed):
+    return [map_id(id, size, speed) for id in trace]
+
+
+def translate_traces(traces, size, speed):
+    return [translate_trace(trace, size, speed) for trace in traces]
+
+
+def translate_trace_collection(trace_collections, size, speed):
+    return [translate_traces(traces, size, speed) for traces in trace_collections]
+
+
+def process_trace_collections(trace_collections, size, speed, track):
+    translated_trace_collection = translate_trace_collection(trace_collections, size, speed)
+    graphics = Graphics(size, size, translated_trace_collection, track)
+    graphics.draw()
+
+
+def test_application(executable, args, process):
+    raw_input = sys.stdin.readlines()
+    raw_input_line = ''.join(raw_input)
+
+    mdp = read_problem(raw_input)
+
+    algorithm = args[0]
+    discount_factor = args[1]
+
+    base = None
+    trace = False
+
+    if mdp.inline_args:  # Use inline params if available
+        size = int(mdp.size)
+        speed = int(mdp.speed)
+        track = int(mdp.track)
+        trace = True
+        if algorithm in "vi":
+            base = float(mdp.vi_base)
+        elif algorithm in "rtdp":
+            base = float(mdp.rtdp_base)
+
+    if len(args) >= 3:  # Override base
+        base = float(args[2])
+
+    if len(args) > 3:  # Override inline params
+        size = int(args[3])
+        speed = int(args[4])
+        track = 0
+        trace = True
+
+    if base is None:
+        error("Base parameter is not provided!"
+              " It should be provided as a command line argument or as part of the mdp description.")
+        return
+
+    results = []
+    labels = []
+    trace_collections = []
+
+    for x in range(0, 10):
+        if algorithm in "vi":
+            termination = str(base * 2 ** -x)
+        elif algorithm in "rtdp":
+            termination = str(int(base * log2(x + 2)))
+        else:
+            error("Invalid algorithm: " + algorithm)
+            return
+
+        params = [algorithm, str(discount_factor), termination]
+        # params = args
+        rewards, traces = execute_application(executable, params, process, raw_input_line, mdp)  # Handle termination
+        if rewards is None:
+            return
+
+        results.append(rewards)
+        labels.append(termination)
+        trace_collections.append(traces)
+
+        print_result(rewards)
+
+    process_results(results, labels, algorithm)
+
+    print(trace)
+    if trace:
+        process_trace_collections(trace_collections, size, speed, track)
+
+
+class Validator:
+    def __init__(self, executable, args):
+        self.args = args
+        self.executable = executable
+        self.process = [None]
+
+    def run(self, timeout):
+        def validate(executable, args, process):
+            test_application(executable, args, process)
+
+        thread = threading.Thread(target=validate,
+                                  kwargs={"executable": self.executable, "args": self.args, "process": self.process})
+        thread.start()
+        thread.join(timeout)
+        if thread.is_alive():
+            self.process[0].terminate()  # This is not thread safe!
+            error("Time limit reached: %s seconds" % timeout)
+            thread.join()
+
+
+class Graphics:
+    def __init__(self, width, height, trace_collection, track=0):
+        self.trace_collection = trace_collection
+        self.width = width
+        self.height = height
+        self.track = track
+        self.cell_size = int(min(MAX_X / self.width, MAX_Y / self.height))
+
+    def draw_trace(self, trace, ctx):
+        offset_w = int(self.cell_size / 2)
+        offset_w += int(random.uniform(self.cell_size / -4, self.cell_size / 4))  # Add noise
+        offset_h = int(self.cell_size / 2)
+        offset_h += int(random.uniform(self.cell_size / -4, self.cell_size / 4))  # Add noise
+
+        ctx.move_to(trace[0][0] * self.cell_size + offset_w, trace[0][1] * self.cell_size + offset_h)
+
+        ctx.arc(trace[0][0] * self.cell_size + offset_w, trace[0][1] * self.cell_size + offset_h,
+                self.cell_size * 0.02,
+                0, 2 * math.pi)
+
+        for mark in trace:
+            ctx.line_to(mark[0] * self.cell_size + offset_w, mark[1] * self.cell_size + offset_h)
+
+        ctx.arc(trace[-1][0] * self.cell_size + offset_w, trace[-1][1] * self.cell_size + offset_h,
+                self.cell_size * 0.02,
+                0, 2 * math.pi)
+
+        ctx.set_line_join(cairo.LINE_JOIN_ROUND)
+        ctx.set_line_cap(cairo.LINE_CAP_ROUND)
+
+        ctx.set_line_width(2)
+
+        ctx.stroke()
+
+        ctx.set_source_rgba(BRAND_ORANGE[0] / 255, BRAND_ORANGE[1] / 255, BRAND_ORANGE[2] / 255, 0.5)
+        ctx.arc(trace[-1][0] * self.cell_size + offset_w, trace[-1][1] * self.cell_size + offset_h,
+                self.cell_size * 0.02,
+                0, 2 * math.pi)
+        ctx.stroke()
+
+    def draw_grid(self, ctx):
+        for w in range(0, self.width):
+            for h in range(0, self.height):
+                ctx.set_line_width(0.1)
+                ctx.set_source_rgba(BRAND_ORANGE[0] / 255, BRAND_ORANGE[1] / 255, BRAND_ORANGE[2] / 255, 0.5)
+
+                x0 = self.cell_size * w
+                y0 = self.cell_size * h
+
+                ctx.rectangle(x0, y0, x0 + self.cell_size, y0 + self.cell_size)
+                ctx.stroke()
+
+    def draw_obstacle(self, ctx):
+        ctx.set_source_rgba(BRAND_ORANGE[0] / 255, BRAND_ORANGE[1] / 255, BRAND_ORANGE[2] / 255, 0.1)
+        min_corner = self.cell_size * self.track
+        max_corner = self.cell_size * (self.width - self.track * 2)
+        ctx.rectangle(min_corner, min_corner, max_corner, max_corner)
+        ctx.fill()
+
+        actual_size = self.width * self.cell_size
+        ctx.rectangle(0, 0, actual_size, self.cell_size)
+        ctx.fill()
+        ctx.rectangle(0, self.cell_size, self.cell_size, actual_size)
+        ctx.fill()
+        ctx.rectangle(actual_size - self.cell_size,  self.cell_size, self.cell_size, actual_size - self.cell_size * 2)
+        ctx.fill()
+        ctx.rectangle(self.cell_size, actual_size - self.cell_size, actual_size - self.cell_size, self.cell_size)
+        ctx.fill()
+
+    def draw(self):
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.width * self.cell_size, self.height * self.cell_size)
+        ctx = cairo.Context(surface)
+
+        # paint background
+        ctx.set_source_rgb(BRAND_DARK[0] / 255, BRAND_DARK[1] / 255, BRAND_DARK[2] / 255)
+        ctx.rectangle(0, 0, self.width * self.cell_size, self.height * self.cell_size)
+        ctx.fill()
+
+        self.draw_grid(ctx)
+        if self.track != 0:
+            self.draw_obstacle(ctx)
+
+        size = len(self.trace_collection)
+        red = 1
+        green = 0
+        blue = 0.2
+        step = 1 / size
+
+        for traces in self.trace_collection:
+
+            for trace in traces:
+                ctx.set_source_rgba(red, green, blue, 0.1)
+                self.draw_trace(trace, ctx)
+
+            red -= step
+            green += step
+
+        surface.write_to_png("track-mdp-{}.png".format(strftime("%Y-%m-%d::%H:%M:%S", gmtime())))
+
+
+def main():
+    if len(sys.argv) < 4:
+        print_usage()
+        return
+
+    try:
+        executable, args = sys.argv[1], sys.argv[2:]
+    except ValueError as e:
+        error(["Invalid input: "] + sys.argv)
+        print_usage()
+        return
+
+    validator = Validator(executable, args)
+    validator.run(TIME_LIMIT)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,4 @@
+-A(x, F(x)) | B(x, x)
+A(F(x), x)
+--- negated query ---
+-B(F(x), F(x))

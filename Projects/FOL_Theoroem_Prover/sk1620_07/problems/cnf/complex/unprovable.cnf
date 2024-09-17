@@ -1,0 +1,7 @@
+-A(x) | B(x) | C(x)
+A(x) | D(x) | E(x)
+-B(x) | F(x) | G(x)
+-C(x) | H(x) | -G(x)
+-F(x) | A(x)
+--- negated query ---
+A(Socrates)

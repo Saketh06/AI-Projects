@@ -1,0 +1,11 @@
+-Coffee(x3) | -Bold(x3) | Good(x3)
+-Coffee(x4) | Bold(x4) | -Good(x4)
+-CoffeeMaker(x5) | -Makes(x5, x6) | Coffee(x6)
+CoffeeMaker(GreenMountain)
+CoffeeMaker(Starbucks)
+Makes(GreenMountain, OurBlend)
+Makes(Starbucks, FrenchRoast)
+Bold(FrenchRoast)
+-Bold(OurBlend)
+--- negated query ---
+Good(FrenchRoast)

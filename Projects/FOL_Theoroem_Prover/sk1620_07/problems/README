@@ -1,0 +1,17 @@
+Manifest -
+ README - This File
+
+ wffs - A directory containing problems stated in first order logic.
+      	You can convert these to CNF using wffs-to-cnf.
+
+ cnf -  A directory under which there are two additional directories
+     	containing problems in conjunctive normal form.
+
+ cnf/simple - Has some simple problems which test for specific
+ 	      operations your theorem prover will need to perform.
+ 	      What they're testing for is explained in the INDEX file
+	      in this directory
+
+ cnf/complex - Some more difficult CNF problems.  These are more
+ 	       representative of the problems we'll actually be
+ 	       testing your theorem prover against.

@@ -1,0 +1,21 @@
+## 0.1 1 2 0
+## 2 2 0 0
+# a tiny MDP that just happens to have two actions in
+#   most states and two successors for every action
+number of states: 4
+start state: 0
+# state 0
+-1.0 0 2
+2 1 0.9 2 0.1
+2 2 0.9 1 0.1
+# state 1
+-10 0 2
+2 0 0.9 3 0.1
+2 3 0.9 0 0.1
+#state 2
+-1 0 2
+2 3 0.9 0 0.1
+2 0 0.9 3 0.1
+# state 3 - terminal
+0 1 0
+# EOF

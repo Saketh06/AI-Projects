@@ -1,0 +1,4 @@
+A(x) | B(x)
+-B(Good)
+--- negated query ---
+-A(x) | Ans(x)

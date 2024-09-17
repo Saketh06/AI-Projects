@@ -1,0 +1,12 @@
+all x (Fraggle(x) -> Plays(x))
+Travels(Uncle(Gobo))
+all x WritesTo(Uncle(x), x)
+Worried(Wembly)
+Builds(Cotterpin)
+Fraggle(Matt)
+WritesTo(Matt, Gobo)
+all x (Builds(x) -> Doozer(x))
+Fraggle(Wembly)
+Fraggle(Gobo)
+--- query ---
+Doozer(Cotterpin)

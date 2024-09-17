@@ -1,0 +1,11 @@
+-Material(x3) | -Brittle(x3) | -Wood(x3)
+-Material(x4) | Brittle(x4) | Wood(x4)
+-Utensil(x5) | -Uses(x5, x6) | Material(x6)
+Utensil(Ladle)
+Utensil(Spoon)
+Uses(Spoon, Metal)
+Uses(Ladle, Wood)
+-Brittle(Wood)
+Brittle(Metal)
+--- negated query ---
+-Wood(Wood)

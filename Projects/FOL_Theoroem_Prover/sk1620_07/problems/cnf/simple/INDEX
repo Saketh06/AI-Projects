@@ -1,0 +1,15 @@
+These are some simple CNFs for grading aspects of the student's
+solutions
+
+unification-1.cnf -- test that only one C# constant is unified at a time.
+unification-2.cnf -- test that you can't unify a constant with a
+                     function.
+unification-3.cnf -- substitute x with A twice.
+unification-4.cnf -- fails because x is substituted with two differing
+                     constants.
+unification-5.cnf -- multiple variables subed with the same constant.
+ans-lit-1.cnf -- a simple test with the answer literal.
+ans-lit-2.cnf -- a simple test with the answer literal and
+                 multi-variables.
+occurs-check.cnf -- test that the occurs check is implemented correctly.
+nested-funcs.cnf -- test nested functions.
