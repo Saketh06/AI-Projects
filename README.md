@@ -1,4 +1,4 @@
-The culmination of my enrollment in CS830, introduction to AI at the University of New Hampshire. As a graduate level project based course, no starter code was provided , this might have been my most expansive, and challenging, expierence in formal computer science. 
+The culmination of my enrollment in CS830, introduction to AI at the University of New Hampshire. As a graduate level project based course, no starter code was provided , we were challenged to implement foundational AI concepts completely on our own. 
 Below is the culmination of my time, a investigation into variants of Randomly Rapid Exploring Tree(RRT) Algortihims when using Dubins vehicles. This project was chosen to be presented at UNH's annual computer science symposium:
 [CSpres.pdf](https://github.com/user-attachments/files/17023205/CSpres.pdf)
 ![image](https://github.com/user-attachments/assets/cd05f3f7-1342-47c4-8556-ada8f83fc1df)
